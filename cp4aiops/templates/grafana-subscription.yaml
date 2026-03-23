@@ -1,0 +1,27 @@
+{{- if .Values.monitoring.enabled }}
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: operatorgroup
+  namespace: {{ .Values.monitoringNamespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "110"
+spec:
+  targetNamespaces:
+  - {{ .Values.monitoringNamespace }}
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: {{ .Values.monitoring.grafana.subscription.name }}
+  namespace: {{ .Values.monitoringNamespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "120"
+spec:
+  channel: {{ .Values.monitoring.grafana.subscription.channel }}
+  installPlanApproval: Automatic
+  name: grafana-operator
+  source: {{ .Values.monitoring.grafana.subscription.source }}
+  sourceNamespace: {{ .Values.monitoring.grafana.subscription.sourceNamespace }}
+{{- end }}

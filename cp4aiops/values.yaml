@@ -31,3 +31,20 @@ installation:
       enabled: false
     - name: logAnomalyDetection
       enabled: false
+
+monitoring:
+  enabled: true
+  grafana:
+    namespace: monitoring-grafana
+    subscription:
+      name: monitoring-grafana
+      channel: v5
+      source: community-operators
+      sourceNamespace: openshift-marketplace
+    storage:
+      size: 2Gi
+      storageClass: ""  # Uses default storage class if empty
+    oauth:
+      image: registry.redhat.io/openshift4/ose-oauth-proxy:v4.14
+    prometheus:
+      url: https://thanos-querier.openshift-monitoring.svc.cluster.local:9091

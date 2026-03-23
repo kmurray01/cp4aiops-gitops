@@ -1,0 +1,26 @@
+{{- if .Values.monitoring.enabled}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-workload-monitoring-config
+  namespace: openshift-user-workload-monitoring
+  annotations:
+    argocd.argoproj.io/sync-wave: "110"
+data:
+  config.yaml: |
+    prometheus:
+      retention: 4d
+      resources:
+        requests:
+          memory: 2Gi
+          cpu: 200m
+        limits:
+          memory: 5Gi
+          cpu: 1
+      volumeClaimTemplate:
+        spec:
+          storageClassName: {{ .Values.installation.spec.storageClass }}
+          resources:
+            requests:
+              storage: 5Gi
+{{- end }}
