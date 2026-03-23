@@ -4,7 +4,7 @@ apiVersion: grafana.integreatly.org/v1beta1
 kind: Grafana
 metadata:
   name: grafana
-  namespace: {{ .Values.monitoringNamespace }}
+  namespace: {{ .Values.grafana.namespace }}
   labels:
     dashboards: "grafana"
   annotations:
@@ -115,7 +115,7 @@ apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDatasource
 metadata:
   name: prometheus
-  namespace: {{ .Values.monitoringNamespace }}
+  namespace: {{ .Values.grafana.namespace }}
   annotations:
     argocd.argoproj.io/sync-wave: "150"
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
