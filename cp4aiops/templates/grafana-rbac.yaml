@@ -33,13 +33,13 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: grafana-cluster-monitoring
-    namespace: {{ .Values.grafana.namespace }}
+    namespace: {{ .Values.monitoring.grafana.namespace }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: grafana-proxy
-  namespace: {{ .Values.grafana.namespace }}
+  namespace: {{ .Values.monitoring.grafana.namespace }}
   annotations:
     argocd.argoproj.io/sync-wave: "130"
 roleRef:
@@ -49,5 +49,5 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: grafana-sa
-    namespace: {{ .Values.grafana.namespace }}
+    namespace: {{ .Values.monitoring.grafana.namespace }}
 {{- end }}

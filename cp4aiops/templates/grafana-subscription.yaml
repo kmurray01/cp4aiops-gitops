@@ -4,18 +4,18 @@ apiVersion: operators.coreos.com/v1
 kind: OperatorGroup
 metadata:
   name: operatorgroup
-  namespace: {{ .Values.grafana.namespace }}
+  namespace: {{ .Values.monitoring.grafana.namespace }}
   annotations:
     argocd.argoproj.io/sync-wave: "110"
 spec:
   targetNamespaces:
-  - {{ .Values.grafana.namespace }}
+  - {{ .Values.monitoring.grafana.namespace }}
 ---
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
   name: {{ .Values.monitoring.grafana.subscription.name }}
-  namespace: {{ .Values.grafana.namespace }}
+  namespace: {{ .Values.monitoring.grafana.namespace }}
   annotations:
     argocd.argoproj.io/sync-wave: "120"
 spec:
