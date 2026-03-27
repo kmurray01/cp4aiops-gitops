@@ -22,3 +22,17 @@ spec:
   name: {{.Values.subscription.name}}
   source: {{.Values.catalog.name}}
   sourceNamespace: {{.Values.namespace}}
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: {{.Values.instana.subName}}
+  namespace: {{.Values.instana.namespace}}
+  annotations:
+    argocd.argoproj.io/sync-wave: "200"
+spec:
+  channel: {{.Values.instana.channel}}
+  installPlanApproval: Automatic
+  name: {{.Values.instana.subName}}
+  source: {{.Values.instana.catalogSource}}
+  sourceNamespace: openshift-marketplace
