@@ -1,0 +1,97 @@
+apiVersion: v1
+data:
+  idp-ibm-verify.sh: "# !/bin/bash\n#\n# IBM Confidential\n# 5737-M96\n# © Copyright
+    IBM Corp. 2026\n#\n# IdP IBM Verify integration\n#\n##\n\nARGS=$*\nADMIN_EMAIL=$ADMIN_EMAIL\nAUTH_NS=\"\"\nISV_SECRET=aiops-ibm-verify-secret\nREMOVE=\n\n#
+    request bodies\nread -r -d '' IBM_VERIFY <<EOF\n{\n  \"name\": \"IBMVerify\",\n
+    \ \"description\": \"IBM Verify\",\n  \"protocol\": \"oidc\",\n  \"type\": \"IBMVerify\",\n
+    \ \"idp_config\": {\n    \"discovery_url\": \"<CLIENT_URL>/oidc/endpoint/default/.well-known/openid-configuration\",\n
+    \   \"client_id\": \"<CLIENT_ID>\",\n    \"client_secret\": \"<CLIENT_SECRET>\",\n
+    \   \"token_attribute_mappings\": {\n      \"groups\": \"groupIds\",\n      \"given_name\":
+    \"given_name\",\n      \"family_name\": \"family_name\",\n      \"sub\": \"email\",\n
+    \     \"email\": \"email\",\n      \"subject\": \"email\"\n    }\n  }\n}\n\nEOF\n\nread
+    -r -d '' ZEN_AUTH <<EOF\n{\n  \"username\": \"admin\",\n  \"password\": \"<ZEN_PASSWORD>\"\n}\nEOF\n\nread
+    -r -d '' ZEN_USERS <<EOF\n[\n  {\n    \"username\": \"<ADMIN_USERNAME>\",\n    \"displayName\":
+    \"<ADMIN_DISPLAYNAME>\",\n    \"authenticator\": \"external\",\n    \"user_roles\":
+    [\"zen_administrator_role\"],\n    \"misc\": {\n      \"realm_name\": \"IBMVerify\"\n
+    \   },\n    \"email\": \"<ADMIN_EMAIL>\"\n  }\n]\nEOF\n\nno_jq() {\n    grep -Eo
+    \"\\\"$1\\\"[^,]*\" | grep -Eo '[^:]*$' | tr -d '\" }'\n}\n\ncheck_secrets() {\n
+    \   secrets=(platform-auth-idp-credentials admin-user-details)\n    if [[ $REMOVE
+    != true ]]; then\n        secrets+=($ISV_SECRET)\n    fi\n\n    notfound=\n    for
+    secret in \"${secrets[@]}\"; do\n        oc -n \"$AUTH_NS\" get secret $secret
+    >/dev/null 2>&1 || \\\n        notfound=$secret\n    done\n\n    if [ ! -z $notfound
+    ]; then\n        echo \"Cannot find secret $notfound\"\n        exit 1\n    fi\n}\n\nget_args()
+    {\n\n    params=\"n:a:s:r\"\n    options=\"-[$(echo $params | tr -d \\\":\\\")]\"\n
+    \   vars=$(getopt $params $ARGS)\n    set -- $vars\n\n    while :; do\n        option=\"$1\"\n
+    \       shift;\n\n        if [[ ! $1 =~ $options ]]; then\n            current_arg=\"$1\"\n
+    \       else\n            current_arg=\n            break\n        fi\n\n        case
+    \"$option\" in\n        -n)\n            AUTH_NS=${current_arg}\n            shift\n
+    \           ;;\n        -a)\n            ADMIN_EMAIL=${current_arg}\n            shift\n
+    \           ;;\n        -s)\n            ISV_SECRET=${current_arg}\n            shift\n
+    \           ;;\n        -r)\n            REMOVE=true\n            ;;\n        --)\n
+    \           break\n            ;;\n        esac\n    done\n\n    if [[ -z $ADMIN_EMAIL
+    ]]; then\n        echo \"\"\n        echo \"[USAGE] $0 -a admin_email [-n auth_ns]
+    [-s ibm_verify_secret] [-r]\"\n        echo \"\"\n        echo \"You must 'oc
+    login' before using this script.\"\n        echo \"\"\n        echo \"Command-line
+    options\"\n        echo \"\"\n        echo \" Admin email\"\n        echo \"   -a
+    \     Initial user e-mail (required)\"\n        echo \"\"\n        echo \" Namespace\"\n
+    \       echo \"   -n      Namespace of AIOps (default: current namespace)\"\n
+    \       echo \"\"\n        echo \" Secret\"\n        echo \"   -s      Name of
+    secret containing IBM verify url, clientid, clientsecret (default: aiops-ibm-verify-secret)\"\n
+    \       echo \"\"\n        echo \" Remove\"\n        echo \"   -r      Remove
+    IBM verify and initial user \"\n        echo\n        exit 1\n    fi\n}\n\nibm_verify()
+    {\n\n    IAM_ADMIN=$(oc -n \"$AUTH_NS\" get secret platform-auth-idp-credentials
+    \\\n    -o jsonpath='{.data.admin_username}' | base64 --decode)\n    IAM_PASSWORD=$(oc
+    -n \"$AUTH_NS\" get secret platform-auth-idp-credentials \\\n    -o jsonpath='{.data.admin_password}'
+    | base64 --decode)\n    IAM_HOST=$(oc -n \"$AUTH_NS\" get route cp-console \\\n
+    \   -o jsonpath='{.spec.host}')\n\n    CLIENT_URL=$(oc -n \"$AUTH_NS\" get secret
+    $ISV_SECRET \\\n    -o jsonpath='{.data.url}' 2>/dev/null | base64 --decode)\n
+    \   CLIENT_ID=$(oc -n \"$AUTH_NS\" get secret $ISV_SECRET \\\n    -o jsonpath='{.data.clientid}'
+    2>/dev/null | base64 --decode)\n    CLIENT_SECRET=$(oc -n \"$AUTH_NS\" get secret
+    $ISV_SECRET \\\n    -o jsonpath='{.data.clientsecret}' 2>/dev/null | base64 --decode)\n\n
+    \   echo \"[INFO] Authenticating with the IAM IdP endpoint $IAM_HOST\"\n\n    AUTH_RESP=`curl
+    -ks \\\n    https://${IAM_HOST}/idprovider/v1/auth/identitytoken \\\n    -H \"Content-Type:
+    application/x-www-form-urlencoded;charset=UTF-8\" \\\n    -d \"grant_type=password&username=${IAM_ADMIN}&password=${IAM_PASSWORD}&scope=openid\"`\n
+    \   TOKEN=$(echo $AUTH_RESP | no_jq \"access_token\")\n\n    EXISTING=$(curl -ksX
+    GET \"https://${IAM_HOST}/idprovider/v3/auth/idsource?name=IBMVerify\" \\\n    -H
+    \"Authorization: Bearer ${TOKEN}\" \\\n    -H  \"Content-Type: application/json\")\n\n
+    \   if [[ $EXISTING != \"{\\\"idp\\\":[]}\" ]]; then\n        UUID=$(echo ${EXISTING}
+    | no_jq \"uid\")\n\n        echo \"[INFO] Removing IBM Verify connection\"\n\n
+    \       curl -ksX DELETE \"https://${IAM_HOST}/idprovider/v3/auth/idsource/${UUID}\"
+    \\\n        -H \"Authorization: Bearer ${TOKEN}\" \\\n        -H  \"Content-Type:
+    application/json\"\n\n    elif [[ $REMOVE == true ]]; then\n        echo \"{\\\"exception\\\":\\\"ibm
+    verify not found\\\",\\\"_messageCode_\\\":\\\"not_found\\\",\\\"message\\\":\\\"The
+    asset is not found\\\",\\\"_statusCode_\\\":404}\"\n    fi\n\n    if [[ $REMOVE
+    != true ]]; then\n        echo \"[INFO] Creating IBM Verify connection\"\n\n        echo
+    $IBM_VERIFY | sed -e \"s/<CLIENT_ID>/$CLIENT_ID/g\" \\\n        -e \"s/<CLIENT_SECRET>/$CLIENT_SECRET/g\"
+    \\\n        -e \"s|<CLIENT_URL>|$CLIENT_URL|g\" | \\\n        \n        curl -ksX
+    POST \"https://${IAM_HOST}/idprovider/v3/auth/idsource\" \\\n        -H \"Authorization:
+    Bearer ${TOKEN}\" \\\n        -H  \"Content-Type: application/json\" \\\n        -d
+    @-\n    fi\n\n    echo\n}\n\nzen_users() {\n\n    ZEN_PASSWORD=$(oc -n \"$AUTH_NS\"
+    get secret admin-user-details \\\n    -o jsonpath='{.data.initial_admin_password}'
+    | base64 --decode)\n    ZEN_HOST=$(oc -n \"$AUTH_NS\" get route cpd -o jsonpath='{.spec.host}')\n\n
+    \   echo \"[INFO] Authenticating with ZEN $ZEN_HOST\"\n\n    AUTH_RESP=$(echo
+    $ZEN_AUTH | sed -e \"s/<ZEN_PASSWORD>/$ZEN_PASSWORD/\" | \\\n\n    curl -ks \\\n
+    \   https://${ZEN_HOST}/icp4d-api/v1/authorize \\\n    -H \"Content-Type: application/json\"
+    \\\n    -d @-)\n    TOKEN=$(echo $AUTH_RESP | no_jq \"token\")\n\n    if [ -z
+    $REMOVE ]; then\n        echo \"[INFO] Adding the users with roles to ZEN\"\n\n
+    \       echo $ZEN_USERS | sed -e \"s/<ADMIN_EMAIL>/$ADMIN_EMAIL/\" \\\n        -e
+    \"s/<ADMIN_USERNAME>/${ADMIN_EMAIL}/\" \\\n        -e \"s/<ADMIN_DISPLAYNAME>/${ADMIN_EMAIL%%@*}/\"
+    | \\\n\n        curl -ks -X POST \\\n        https://${ZEN_HOST}/usermgmt/v1/user/bulk
+    \\\n        -H \"Authorization: Bearer ${TOKEN}\" \\\n        -H \"Content-Type:
+    application/json\" \\\n        -d @-\n    else\n        echo \"[INFO] Removing
+    the users with roles to ZEN\"\n\n        curl -ks -X DELETE \\\n        https://${ZEN_HOST}/usermgmt/v1/user/${ADMIN_EMAIL}
+    \\\n        -H \"Authorization: Bearer ${TOKEN}\" \\\n        -H \"Content-Type:
+    application/json\"\n    fi\n}\n\nmain() {\n\n    get_args\n\n    echo \"[INFO]
+    Starting IdP configuration\"\n\n    check_secrets\n\n    ibm_verify\n\n    if
+    [ $? -ne 0 ]; then\n        echo\n        echo \"[INFO] Failed to onboard or remove
+    IBM Verify IdP\"\n        exit 1\n    fi\n\n    zen_users\n\n    if [ $? -ne 0
+    ]; then\n        echo\n        echo \"[INFO] Failed to add or remove users in
+    ZEN\"\n        exit 1\n    fi\n\n    echo\n    echo \"[INFO] Completed IdP configuration\"\n
+    \   exit 0\n}\n\nmain\n"
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: idp-ibm-verify
+  namespace: {{.Values.namespace}}
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"
