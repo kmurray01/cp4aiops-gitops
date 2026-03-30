@@ -55,5 +55,3 @@ instana:
   catalogSource: certified-operators
   catalogSourceNamespace: openshift-marketplace
   channel: stable
-  key: "0000"
-  clusterName: "test" # TODO: we need to use the actual cluster name here
