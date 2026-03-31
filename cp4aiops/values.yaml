@@ -48,3 +48,10 @@ monitoring:
       image: registry.redhat.io/openshift4/ose-oauth-proxy:v4.14
     prometheus:
       url: https://thanos-querier.openshift-monitoring.svc.cluster.local:9091
+
+instana:
+  namespace: instana-agent
+  subName: instana-agent-operator
+  catalogSource: certified-operators
+  catalogSourceNamespace: openshift-marketplace
+  channel: stable
