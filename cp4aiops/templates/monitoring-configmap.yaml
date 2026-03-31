@@ -9,18 +9,18 @@ metadata:
 data:
   config.yaml: |
     prometheus:
-      retention: 4d
       resources:
-        requests:
-          memory: 2Gi
-          cpu: 200m
         limits:
-          memory: 5Gi
           cpu: 1
+          memory: 5Gi
+        requests:
+          cpu: 200m
+          memory: 2Gi
+      retention: 15d
       volumeClaimTemplate:
         spec:
-          storageClassName: {{ .Values.installation.spec.storageClass }}
           resources:
             requests:
               storage: 5Gi
+          storageClassName: {{ .Values.installation.spec.storageClass }}
 {{- end }}
