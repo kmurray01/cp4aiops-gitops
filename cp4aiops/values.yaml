@@ -14,6 +14,8 @@ subscription:
 installation:
   name: ibm-cp-aiops
   spec:
+    monitoring:
+      enabled: true
     size: large
     storageClass: ocs-storagecluster-cephfs
     storageClassLargeBlock: ocs-storagecluster-ceph-rbd
