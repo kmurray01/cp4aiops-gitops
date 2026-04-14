@@ -22,3 +22,7 @@ spec:
   name: {{.Values.subscription.name}}
   source: {{.Values.catalog.name}}
   sourceNamespace: {{.Values.namespace}}
+  config:
+    env:
+    - name: ENABLE_KAFKA_METRICS
+      value: 'true'
