@@ -1,14 +1,3 @@
-apiVersion: operators.coreos.com/v1
-kind: OperatorGroup
-metadata:
-  name: operatorgroup
-  namespace: {{.Values.instana.namespace}}
-  annotations:
-    argocd.argoproj.io/sync-wave: "110"
-spec:
-  targetNamespaces:
-  - {{.Values.instana.namespace}}
----
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
